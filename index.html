@@ -50,7 +50,6 @@
             z-index: 10;
             border: 3px solid rgba(255, 255, 255, 0.8);
             transition: all 0.5s ease;
-            /* Важно для позиционирования кнопки ВНУТРИ */
             position: relative; 
         }
 
@@ -82,15 +81,14 @@
             box-shadow: 0 8px 20px rgba(255, 105, 180, 0.15);
         }
 
-        /* Контейнер для кнопок, ограничивающий движение "Нет" */
         .buttons-container {
             position: relative;
-            min-height: 80px; /* Достаточно места для прыжков */
+            min-height: 60px;
             width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 20px;
+            gap: 20px;
         }
 
         .btn {
@@ -99,9 +97,8 @@
             border: none;
             border-radius: 50px;
             cursor: pointer;
-            transition: all 0.2s ease; /* Быстрая реакция */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             outline: none;
-            position: absolute; /* Кнопки позиционируются абсолютно внутри контейнера */
         }
 
         #yes-btn {
@@ -109,14 +106,11 @@
             color: white;
             box-shadow: 0 10px 25px rgba(255, 71, 126, 0.4);
             font-weight: bold;
-            /* Фиксированное положение "Да" */
-            left: 50%;
-            transform: translateX(-110%); 
             z-index: 12;
         }
 
         #yes-btn:hover {
-            transform: translateX(-110%) scale(1.1);
+            transform: scale(1.1);
             box-shadow: 0 12px 30px rgba(255, 71, 126, 0.6);
         }
 
@@ -124,12 +118,9 @@
             background-color: #fff0f5;
             color: #ff758f;
             border: 2px dashed #ffb3c1;
-            /* Начальное положение "Нет" */
-            left: 50%;
-            transform: translateX(10%);
-            z-index: 11;
-            /* Плавное изменение координат */
-            transition: left 0.1s ease-out, top 0.1s ease-out; 
+            z-index: 15;
+            /* Плавное перемещение без дёрганий */
+            transition: left 0.15s ease-out, top 0.15s ease-out; 
         }
 
         /* Экран победы (скрыт по умолчанию) */
@@ -168,13 +159,13 @@
 </head>
 <body>
 
-    <!-- Компонент для автозапуска звука (скрытый) -->
+    <!-- Фоновая музыка -->
     <iframe src="https://assets.mixkit.co/active_storage/sfx/123/123.wav" allow="autoplay" id="audio" style="display:none"></iframe>
     <audio autoplay loop id="bg-music">
         <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
     </audio>
 
-    <!-- Главная карточка с вопросом -->
+    <!-- Главная карточка с вопросом (Текст возвращен!) -->
     <div class="card" id="main-card">
         <div class="gif-container">
             <img src="https://media.tenor.com/79S-x_M2Y40AAAAi/peach-goma.gif" alt="Cute begging cat">
@@ -182,14 +173,13 @@
         <h1>Кешірші мені, Асем... 🥺🌸</h1>
         <p>Моё солнышко, я безумно извиняюсь за то, что расстроил тебя. Мой мир становится таким серым и грустным, когда мы в ссоре. Пожалуйста, улыбнись и прости меня... Давай снова будем счастливы вместе? 💞</p>
         
-        <!-- НОВЫЙ КОНТЕЙНЕР ДЛЯ КНОПОК -->
-        <div class="buttons-container" id="buttons-area">
+        <div class="buttons-container">
             <button class="btn" id="yes-btn">Да, прощаю! 🥰</button>
             <button class="btn" id="no-btn">Нет 💔</button>
         </div>
     </div>
 
-    <!-- Карточка, которая откроется при нажатии "Да" -->
+    <!-- Экран победы -->
     <div class="card hidden" id="success-card">
         <div class="success-screen">
             <img src="https://media.tenor.com/V_a1Z_H7v3gAAAAi/goma-goma-happy.gif" alt="Happy cat hugging">
@@ -203,47 +193,39 @@
         const yesBtn = document.getElementById('yes-btn');
         const mainCard = document.getElementById('main-card');
         const successCard = document.getElementById('success-card');
-        const buttonsArea = document.getElementById('buttons-area');
         const audio = document.getElementById('bg-music');
 
-        // Автозапуск музыки при первом взаимодействии
+        // Музыка запускается при первом тапе/клике
         document.body.addEventListener('click', () => {
             if (audio) { audio.volume = 0.2; audio.play().catch(() => {}); }
         }, { once: true });
 
-        // ФУНКЦИЯ ПРЫЖКОВ КНОПКИ "НЕТ" ВНУТРИ КАРТОЧКИ
+        // УМНОЕ СЛУЧАЙНОЕ ПЕРЕМЕЩЕНИЕ БЕЗ ВЫЛЕТА ЗА ЭКРАН
         function moveButton() {
-            // Размеры зоны, где можно прыгать (внутри .buttons-container)
-            const areaWidth = buttonsArea.offsetWidth;
-            const areaHeight = buttonsArea.offsetHeight;
-
-            // Размеры самой кнопки
             const btnWidth = noBtn.offsetWidth;
             const btnHeight = noBtn.offsetHeight;
 
-            // Рассчитываем случайные координаты, чтобы кнопка не вылезала за края зоны
-            // Мы убираем translateX(10%), который был в CSS для начального позиционирования
-            noBtn.style.transform = 'none'; 
-            
-            const maxX = areaWidth - btnWidth;
-            const maxY = areaHeight - btnHeight;
+            // Безопасный отступ от краев экрана в пикселях
+            const margin = 40; 
 
-            // Случайная позиция, но не слишком близко к кнопке "Да" (которая слева)
-            // Кнопка "Да" занимает левую половину, так что "Нет" прыгает в правой и по центру
-            const minXForNo = areaWidth * 0.3; // Начинаем от 30% ширины зоны
-            
-            const randomX = Math.max(minXForNo, Math.random() * maxX);
-            const randomY = Math.random() * maxY;
+            // Считаем максимально допустимые координаты на экране
+            const maxX = window.innerWidth - btnWidth - margin;
+            const maxY = window.innerHeight - btnHeight - margin;
 
-            // Применяем новые координаты относительно .buttons-container
+            // Генерируем случайную точку, не выходящую за "безопасную зону"
+            const randomX = Math.max(margin, Math.random() * maxX);
+            const randomY = Math.max(margin, Math.random() * maxY);
+
+            // Переключаем на fixed, чтобы кнопка летала по всему экрану
+            noBtn.style.position = 'fixed';
             noBtn.style.left = `${randomX}px`;
             noBtn.style.top = `${randomY}px`;
         }
 
-        // События: кнопка убегает при наведении или таче
+        // События для ПК и мобилок
         noBtn.addEventListener('mouseover', moveButton);
         noBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Запрещаем стандартный клик при касании
+            e.preventDefault(); // Игнорируем стандартный клик при касании
             moveButton();
         });
 
@@ -254,7 +236,7 @@
             createHeartExplosion();
         });
 
-        // Эффект взрыва сердечек
+        // Взрыв сердечек
         function createHeartExplosion() {
             for (let i = 0; i < 40; i++) {
                 setTimeout(() => {
@@ -270,7 +252,7 @@
             }
         }
 
-        // Фоновые плывущие сердечки
+        // Постоянно плывущие сердечки на фоне
         setInterval(() => {
             const heart = document.createElement('div');
             heart.classList.add('heart-bg');
